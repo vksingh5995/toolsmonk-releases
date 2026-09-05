@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>toolsmonk</id>
+    <version>1.1.12</version>
+    <packageSourceUrl>https://github.com/vksingh5995/toolsmonk-releases/tree/main/choco/toolsmonk</packageSourceUrl>
+    <owners>vksingh5995</owners>
+    <title>ToolsMonk</title>
+    <authors>ToolsMonk</authors>
+    <projectUrl>https://toolsmonk.com</projectUrl>
+    <iconUrl>https://a.fsdn.com/allura/p/toolsmonk/icon</iconUrl>
+    <copyright>Copyright (c) 2026 ToolsMonk</copyright>
+    <licenseUrl>https://toolsmonk.com/terms-of-service</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <docsUrl>https://sourceforge.net/p/toolsmonk/wiki/Home/</docsUrl>
+    <bugTrackerUrl>https://toolsmonk.com/contact</bugTrackerUrl>
+    <tags>toolsmonk pdf pdf-editor image image-editor text seo calculator converter productivity</tags>
+    <summary>250+ tools for PDFs, images, text, SEO and everyday calculations, in one desktop app.</summary>
+    <description><![CDATA[
+ToolsMonk is a Windows desktop app that puts a large, practical toolbox in one window: PDFs, images, text, SEO checks and everyday calculations.
+
+**Where your files are processed**
+
+Most tools run entirely on your device. You pick a file, it is processed locally, and it never leaves your computer. A smaller number genuinely need a server, such as the AI features and the tools that fetch a page from the web. The app says which is which on the tool itself, and the full list is published at https://toolsmonk.com/where-your-files-are-processed
+
+**What is inside**
+
+* PDF: edit, merge, split, compress, rotate, crop, organise pages, add page numbers, watermark, sign, redact, unlock, repair, fill forms, and convert to and from Word, Excel, PowerPoint, images and plain text.
+* Images: resize, crop, compress, convert between formats, remove backgrounds, upscale, batch process, and a layered photo editor.
+* Text and developer: word and character counts, case conversion, formatting, comparison, JSON and CSV handling, hashing and encoding.
+* Calculators: percentages, currency, dates, finance, health and study tools.
+* SEO: site audits, meta and schema checks, speed tests, sitemap and robots tools.
+
+**Notes**
+
+* The upstream installer is not code signed. Chocolatey verifies the download with a SHA256 checksum instead.
+* This package installs machine-wide (`/allusers`). The same installer run by hand installs per-user by default.
+
+Documentation: https://sourceforge.net/p/toolsmonk/wiki/Home/
+]]></description>
+    <releaseNotes>https://github.com/vksingh5995/toolsmonk-releases/releases/tag/v1.1.12</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
