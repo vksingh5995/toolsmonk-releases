@@ -2,13 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>toolsmonk</id>
-    <version>1.1.12</version>
+    <version>1.1.12.1</version>
     <packageSourceUrl>https://github.com/vksingh5995/toolsmonk-releases/tree/main/choco/toolsmonk</packageSourceUrl>
     <owners>vksingh5995</owners>
     <title>ToolsMonk</title>
     <authors>ToolsMonk</authors>
     <projectUrl>https://toolsmonk.com</projectUrl>
-    <iconUrl>https://a.fsdn.com/allura/p/toolsmonk/icon</iconUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/vksingh5995/toolsmonk-releases@e79a9ddc635b7f10c94d0716c9b2edb7d904efb6/choco/toolsmonk/icon.png</iconUrl>
     <copyright>Copyright (c) 2026 ToolsMonk</copyright>
     <licenseUrl>https://toolsmonk.com/terms-of-service</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
