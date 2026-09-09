@@ -1,0 +1,368 @@
+name: Publish downstream
+
+# ⚠️⚠️ THIS WORKFLOW LIVES IN THE *RELEASES* REPO, NOT IN THE APP REPO, AND THAT IS
+# THE WHOLE REASON IT WORKS. `Toolsmonk-Desktop-App` builds the installer and pushes
+# a DRAFT release *here*, so the `release: published` event fires in THIS repository
+# and not in that one. The same trigger added over there would be syntactically
+# perfect and would never once run.
+#
+# The chain is:
+#   1. dispatch "Desktop release" in Toolsmonk-Desktop-App (publish = true)
+#   2. it creates a DRAFT release here
+#   3. a human reads the notes and presses Publish        <- the deliberate gate
+#   4. this workflow runs and pushes that same build downstream
+#
+# Step 3 stays human on purpose. Publishing is what makes a build the update every
+# installed copy fetches, and `toolsmonk.com/download/windows` resolves
+# `releases/latest` at request time, so pressing Publish also moves the public
+# download button. That is not a thing to do from a matrix job.
+
+on:
+  release:
+    types: [published]
+
+  # ⚠️ Manual dispatch is NOT a convenience here, it is required. Both downstream
+  # channels are currently blocked on their FIRST submission sitting in somebody
+  # else's moderation queue (see the precondition checks below). A release published
+  # while they are blocked can never reach them from the `release` event alone,
+  # because that event does not fire a second time. When a queue clears, dispatch
+  # this against the tag that was missed.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish downstream (e.g. v1.1.14). Blank = latest.'
+        type: string
+        default: ''
+      channels:
+        description: Which channels to publish to
+        type: choice
+        default: all
+        options: [all, chocolatey, winget]
+
+# The chocolatey job commits the regenerated package source back, so the tree always
+# says what was actually pushed. Nothing else here needs write access.
+permissions:
+  contents: write
+
+# Never two at once: both jobs mutate the same package source and push to registries
+# that reject a duplicate version with an error reading like an auth failure rather
+# than like a race.
+concurrency:
+  group: publish-downstream
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  resolve:
+    name: Resolve release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      version: ${{ steps.pick.outputs.version }}
+      exe_url: ${{ steps.pick.outputs.exe_url }}
+      sha256: ${{ steps.hash.outputs.sha256 }}
+      do_choco: ${{ steps.pick.outputs.do_choco }}
+      do_winget: ${{ steps.pick.outputs.do_winget }}
+    steps:
+      - id: pick
+        name: Work out which release this is
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+          CHANNELS: ${{ inputs.channels || 'all' }}
+        run: |
+          set -euo pipefail
+
+          tag="${EVENT_TAG:-}"
+          if [ -z "$tag" ]; then tag="${INPUT_TAG:-}"; fi
+          if [ -z "$tag" ]; then
+            tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          fi
+
+          # ⚠️ The version is the tag with its leading `v` stripped and NOTHING else.
+          # Deriving it from the asset filename instead looks equivalent and breaks the
+          # day an asset is renamed.
+          version="${tag#v}"
+          case "$version" in
+            [0-9]*.[0-9]*.[0-9]*) : ;;
+            *) echo "::error::tag '$tag' does not look like vMAJOR.MINOR.PATCH"; exit 1 ;;
+          esac
+
+          # ⚠️ Read the asset off the release rather than composing its URL by hand. A
+          # composed URL that 404s surfaces three steps later as a checksum failure,
+          # which reads as a corrupted build rather than as a wrong filename.
+          exe_url=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" \
+            --json assets --jq '.assets[] | select(.name | test("Setup.*[.]exe$")) | .url' | head -1)
+          if [ -z "$exe_url" ]; then
+            echo "::error::no Setup .exe asset on release $tag"
+            exit 1
+          fi
+
+          case "$CHANNELS" in
+            all)        do_choco=true;  do_winget=true  ;;
+            chocolatey) do_choco=true;  do_winget=false ;;
+            winget)     do_choco=false; do_winget=true  ;;
+            *) echo "::error::unknown channels value '$CHANNELS'"; exit 1 ;;
+          esac
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "exe_url=$exe_url"
+            echo "do_choco=$do_choco"
+            echo "do_winget=$do_winget"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Release $tag (version $version)"
+            echo ""
+            echo "Installer: $exe_url"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - id: hash
+        name: Checksum the installer that was actually published
+        env:
+          EXE_URL: ${{ steps.pick.outputs.exe_url }}
+        run: |
+          set -euo pipefail
+          # ⚠️ COMPUTED FROM THE PUBLISHED BYTES. Not carried forward from the build
+          # job, and not read out of `latest.yml`: that file records sha512 in base64
+          # while Chocolatey wants sha256 in hex, so it cannot be converted, and
+          # trusting it would move the integrity check off the artifact people
+          # actually download.
+          curl -fsSL "$EXE_URL" -o installer.exe
+          sha=$(sha256sum installer.exe | cut -d' ' -f1 | tr 'a-f' 'A-F')
+          bytes=$(stat -c%s installer.exe)
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          {
+            echo ""
+            echo "SHA256 \`$sha\` over $bytes bytes"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  chocolatey:
+    name: Chocolatey
+    needs: resolve
+    if: needs.resolve.outputs.do_choco == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # ⚠️⚠️ PRECONDITION, MEASURED POSITIVELY, BECAUSE THE FAILURE IT PREVENTS IS
+      # INDISTINGUISHABLE FROM A BAD API KEY. Chocolatey refuses a push while a
+      # version sits in moderation with no approved version behind it, and it answers
+      # a bare `403 Forbidden` with a generic IIS credentials page. Their own docs
+      # list it under "Common Errors" as *"Package has a version in moderation and no
+      # approved versions."* Reading that 403 as an auth problem costs an afternoon
+      # rotating a key that was never wrong.
+      #
+      # So the state is measured up front instead: `FindPackagesById` lists APPROVED
+      # versions only. Verified against a control on 2026-09-09 - `git` returns 40
+      # entries, `toolsmonk` returns 0 - so a zero here means the queue, not a broken
+      # query.
+      - id: gate
+        name: Is there an approved version to update?
+        shell: pwsh
+        # ⚠️ The secret arrives through `env`, never interpolated into the script body.
+        # `$k = "${{ secrets.X }}"` is the shape everyone writes and it splices the
+        # secret's TEXT into source: one quote inside the value and the step becomes a
+        # syntax error at best and an injection at worst. Presence is all this gate
+        # needs anyway.
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # ⚠️ An ABSENT secret expands to an EMPTY STRING, not to nothing. Checking
+          # the expansion for emptiness is the only way to see it; a step that merely
+          # used it would fail much later with an unrelated-looking message.
+          if ([string]::IsNullOrWhiteSpace($env:CHOCO_API_KEY)) {
+            Write-Host "::notice::CHOCO_API_KEY is not set - skipping Chocolatey."
+            "skip=true" | Out-File $env:GITHUB_OUTPUT -Append
+            "reason=no CHOCO_API_KEY secret is configured" | Out-File $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+
+          $feed = "https://community.chocolatey.org/api/v2/FindPackagesById()?id='toolsmonk'"
+          $resp = Invoke-WebRequest $feed -UseBasicParsing
+          $count = ([regex]::Matches($resp.Content, '<entry')).Count
+          Write-Host "approved toolsmonk versions on Chocolatey: $count"
+
+          if ($count -eq 0) {
+            Write-Host "::notice::No approved 'toolsmonk' version yet - the first submission is still in moderation, and pushing now returns a 403 that looks like an auth failure. Skipping."
+            "skip=true" | Out-File $env:GITHUB_OUTPUT -Append
+            "reason=first submission is still in Chocolatey moderation" | Out-File $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+          "skip=false" | Out-File $env:GITHUB_OUTPUT -Append
+
+      - name: Rewrite the package source for this version
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          SHA256: ${{ needs.resolve.outputs.sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $nuspec  = 'choco/toolsmonk/toolsmonk.nuspec'
+          $install = 'choco/toolsmonk/tools/chocolateyinstall.ps1'
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/ToolsMonk-Setup-$env:VERSION.exe"
+
+          # ⚠️ EVERY REPLACEMENT IS READ BACK. A pattern that silently matches nothing
+          # would publish the PREVIOUS installer under the NEW version number, which is
+          # the one outcome worse than not publishing at all - and it would pass every
+          # other check in this job.
+          $s = Get-Content $nuspec -Raw
+          $s = $s -replace '(?<=<version>)[^<]+(?=</version>)', $env:VERSION
+          $s = $s -replace '(?<=<releaseNotes>)[^<]+(?=</releaseNotes>)', "https://github.com/$env:GITHUB_REPOSITORY/releases/tag/$env:TAG"
+          Set-Content $nuspec $s -NoNewline
+          if ((Get-Content $nuspec -Raw) -notmatch [regex]::Escape("<version>$env:VERSION</version>")) {
+            throw "nuspec <version> did not update to $env:VERSION"
+          }
+
+          # Line-based, not a positional regex over the whole file: the install script
+          # aligns its assignments with runs of spaces, and a pattern pinned to that
+          # alignment breaks on a whitespace edit while still matching nothing quietly.
+          $out = foreach ($line in (Get-Content $install)) {
+            if     ($line -match '^\$url64\s*=')      { "`$url64       = '$url'" }
+            elseif ($line -match '^\$checksum64\s*=') { "`$checksum64  = '$($env:SHA256)'" }
+            else                                      { $line }
+          }
+          Set-Content $install $out
+          $after = Get-Content $install -Raw
+          if ($after -notmatch [regex]::Escape($url))        { throw "install script url64 did not update" }
+          if ($after -notmatch [regex]::Escape($env:SHA256)) { throw "install script checksum64 did not update" }
+
+          Write-Host "nuspec -> $env:VERSION; installer -> $url"
+
+      - name: Pack and push
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco pack choco/toolsmonk/toolsmonk.nuspec --out .
+          $nupkg = Get-ChildItem *.nupkg | Select-Object -First 1
+          if (-not $nupkg) { throw "choco pack produced no .nupkg" }
+          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          "Chocolatey: pushed $($nupkg.Name)" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      # ⚠️ The tree has to say what was actually pushed. Leaving the source at the
+      # previous version makes this repo a second, wrong source of truth for a package
+      # that is already public, and the next person edits from it.
+      - name: Commit the regenerated package source
+        if: steps.gate.outputs.skip != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add choco/toolsmonk
+          if git diff --cached --quiet; then
+            echo "nothing to commit - source already at this version"
+            exit 0
+          fi
+          git commit -m "chore(choco): publish $VERSION"
+          git push
+
+      - name: Report the skip
+        if: steps.gate.outputs.skip == 'true'
+        shell: bash
+        run: |
+          {
+            echo "### Chocolatey: skipped"
+            echo ""
+            echo "Reason: ${{ steps.gate.outputs.reason }}"
+            echo ""
+            echo "Re-run this workflow from the Actions tab once that clears."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  winget:
+    name: winget
+    needs: resolve
+    if: needs.resolve.outputs.do_winget == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # ⚠️⚠️ PRECONDITION AGAIN, FOR A DIFFERENT REASON. `wingetcreate update` UPDATES
+      # an existing manifest; it cannot create one. Until the first "New package" PR
+      # merges into microsoft/winget-pkgs there is no manifests/t/ToolsMonk/ToolsMonk
+      # to update, and the command fails with a message about the identifier that
+      # reads like a typo in the identifier.
+      #
+      # Verified against a control on 2026-09-09: manifests/t/ToolsMonk answers 404
+      # while manifests/m/Microsoft/PowerToys lists versions, so a 404 here means the
+      # package genuinely is not published yet.
+      - id: gate
+        name: Does ToolsMonk.ToolsMonk exist in winget-pkgs yet?
+        shell: pwsh
+        # Same rule as the Chocolatey gate: by env, never spliced into the script.
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ([string]::IsNullOrWhiteSpace($env:WINGET_TOKEN)) {
+            Write-Host "::notice::WINGET_TOKEN is not set - skipping winget."
+            "skip=true" | Out-File $env:GITHUB_OUTPUT -Append
+            "reason=no WINGET_TOKEN secret is configured" | Out-File $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+
+          $url = 'https://api.github.com/repos/microsoft/winget-pkgs/contents/manifests/t/ToolsMonk/ToolsMonk'
+          try {
+            Invoke-RestMethod $url -Headers @{ 'User-Agent' = 'toolsmonk-release' } | Out-Null
+            "skip=false" | Out-File $env:GITHUB_OUTPUT -Append
+          } catch {
+            Write-Host "::notice::ToolsMonk.ToolsMonk is not in winget-pkgs yet - the first 'New package' PR has not merged, so there is no manifest to update. Skipping."
+            "skip=true" | Out-File $env:GITHUB_OUTPUT -Append
+            "reason=the first 'New package' PR has not merged yet" | Out-File $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Submit the update PR
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.resolve.outputs.version }}
+          TAG: ${{ needs.resolve.outputs.tag }}
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/ToolsMonk-Setup-$env:VERSION.exe"
+          Invoke-WebRequest 'https://aka.ms/wingetcreate/latest' -OutFile wingetcreate.exe
+
+          # ⚠️ `user` is not decoration: the NSIS installer is per-user by default
+          # (electron-builder `perMachine: false`), and a manifest claiming a machine
+          # scope makes `winget upgrade` fail to match what is installed. This mirrors
+          # the scope the first manifest was submitted with; the Chocolatey package
+          # deliberately differs because it runs elevated and passes /allusers.
+          #
+          # wingetcreate re-downloads the installer and computes its own hash, so the
+          # manifest's checksum comes from the published bytes rather than from us.
+          .\wingetcreate.exe update ToolsMonk.ToolsMonk `
+            --version $env:VERSION `
+            --urls "$url|x64|user" `
+            --submit `
+            --token $env:WINGET_TOKEN
+
+          "winget: submitted an update PR for $env:VERSION" | Out-File $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Report the skip
+        if: steps.gate.outputs.skip == 'true'
+        shell: bash
+        run: |
+          {
+            echo "### winget: skipped"
+            echo ""
+            echo "Reason: ${{ steps.gate.outputs.reason }}"
+            echo ""
+            echo "Re-run this workflow from the Actions tab once that clears."
+          } >> "$GITHUB_STEP_SUMMARY"
