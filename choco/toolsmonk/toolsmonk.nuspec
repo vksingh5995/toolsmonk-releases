@@ -12,7 +12,7 @@
     <copyright>Copyright (c) 2026 ToolsMonk</copyright>
     <licenseUrl>https://toolsmonk.com/terms-of-service</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <docsUrl>https://sourceforge.net/p/toolsmonk/wiki/Home/</docsUrl>
+    <docsUrl>https://toolsmonk.com/all-tools</docsUrl>
     <bugTrackerUrl>https://toolsmonk.com/contact</bugTrackerUrl>
     <tags>toolsmonk pdf pdf-editor image image-editor text seo calculator converter productivity</tags>
     <summary>250+ tools for PDFs, images, text, SEO and everyday calculations, in one desktop app.</summary>
@@ -36,7 +36,7 @@ Most tools run entirely on your device. You pick a file, it is processed locally
 * The upstream installer is not code signed. Chocolatey verifies the download with a SHA256 checksum instead.
 * This package installs machine-wide (`/allusers`). The same installer run by hand installs per-user by default.
 
-Documentation: https://sourceforge.net/p/toolsmonk/wiki/Home/
+Documentation: https://toolsmonk.com/all-tools
 ]]></description>
     <releaseNotes>https://github.com/vksingh5995/toolsmonk-releases/releases/tag/v1.1.12</releaseNotes>
   </metadata>
