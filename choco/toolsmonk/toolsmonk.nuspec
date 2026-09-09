@@ -10,7 +10,7 @@
     <projectUrl>https://toolsmonk.com</projectUrl>
     <iconUrl>https://cdn.jsdelivr.net/gh/vksingh5995/toolsmonk-releases@e79a9ddc635b7f10c94d0716c9b2edb7d904efb6/choco/toolsmonk/icon.png</iconUrl>
     <copyright>Copyright (c) 2026 ToolsMonk</copyright>
-    <licenseUrl>https://toolsmonk.com/terms-of-service</licenseUrl>
+    <licenseUrl>https://toolsmonk.com/desktop-license</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <docsUrl>https://toolsmonk.com/all-tools</docsUrl>
     <bugTrackerUrl>https://toolsmonk.com/contact</bugTrackerUrl>
