@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>toolsmonk</id>
-    <version>1.1.12.1</version>
+    <version>1.1.12</version>
     <packageSourceUrl>https://github.com/vksingh5995/toolsmonk-releases/tree/main/choco/toolsmonk</packageSourceUrl>
     <owners>vksingh5995</owners>
     <title>ToolsMonk</title>
@@ -30,6 +30,16 @@ Most tools run entirely on your device. You pick a file, it is processed locally
 * Text and developer: word and character counts, case conversion, formatting, comparison, JSON and CSV handling, hashing and encoding.
 * Calculators: percentages, currency, dates, finance, health and study tools.
 * SEO: site audits, meta and schema checks, speed tests, sitemap and robots tools.
+
+**Licensing**
+
+ToolsMonk is freeware. All 255 tools are free to use, with no paid tier, no subscription, no trial period and no feature held back behind a payment. An account is not required.
+
+The amounts shown on the website donate page are optional donations toward hosting and development. They are not plans and they unlock nothing: a donor and a non-donor get exactly the same application. Full terms: https://toolsmonk.com/desktop-license
+
+**Also available from the Microsoft Store**
+
+ToolsMonk is also published on the Microsoft Store: https://apps.microsoft.com/detail/9P1W5M4JBZDM
 
 **Notes**
 
