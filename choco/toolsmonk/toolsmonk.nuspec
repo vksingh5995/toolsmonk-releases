@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>toolsmonk</id>
-    <version>1.1.16</version>
+    <version>1.1.18</version>
     <packageSourceUrl>https://github.com/vksingh5995/toolsmonk-releases/tree/main/choco/toolsmonk</packageSourceUrl>
     <owners>vksingh5995</owners>
     <title>ToolsMonk</title>
@@ -48,7 +48,7 @@ ToolsMonk is also published on the Microsoft Store: https://apps.microsoft.com/d
 
 Documentation: https://toolsmonk.com/all-tools
 ]]></description>
-    <releaseNotes>https://github.com/vksingh5995/toolsmonk-releases/releases/tag/v1.1.16</releaseNotes>
+    <releaseNotes>https://github.com/vksingh5995/toolsmonk-releases/releases/tag/v1.1.18</releaseNotes>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
