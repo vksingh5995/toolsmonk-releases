@@ -150,6 +150,24 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # ⚠️⚠️ WITHOUT THIS THE JOB CANNOT COMMIT ANYTHING. A `release` event checks
+          # out the TAG, which is a DETACHED HEAD, and the "Commit the regenerated
+          # package source" step below then dies on `git push` with
+          #     fatal: You are not currently on a branch.
+          # and exit 128 -- after the Chocolatey push has already succeeded, so the
+          # package is public while this repo still describes the previous version.
+          #
+          # ⚠️ IT SURVIVED 1.1.16, 1.1.17 AND 1.1.18 BY LUCK, WHICH IS WHY IT READS AS A
+          # NEW BUG AND IS NOT ONE. That step exits early when the source is already at
+          # the released version, and it was, because a workflow_dispatch run on main
+          # had updated it by hand. 1.1.19 was the first release where the step had
+          # something real to commit, and it failed on the first try.
+          #
+          # Nothing in this job reads the tag's tree: the version, tag and checksum all
+          # arrive from the release event via needs.resolve.outputs.*. So checking out
+          # the default branch is not a compromise, it is the correct input.
+          ref: ${{ github.event.repository.default_branch }}
 
       # ⚠️⚠️ PRECONDITION, MEASURED POSITIVELY, BECAUSE THE FAILURE IT PREVENTS IS
       # INDISTINGUISHABLE FROM A BAD API KEY. Chocolatey refuses a push while a
