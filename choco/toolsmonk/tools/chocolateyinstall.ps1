@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 
 $packageName = 'toolsmonk'
-$url64       = 'https://github.com/vksingh5995/toolsmonk-releases/releases/download/v1.1.19/ToolsMonk-Setup-1.1.19.exe'
-$checksum64  = 'C2FD2F2E7AA3AA589EE961B4042C2C80494A32C262CFCE5F514E9E38A7FA7D5F'
+$url64       = 'https://github.com/vksingh5995/toolsmonk-releases/releases/download/v1.1.20/ToolsMonk-Setup-1.1.20.exe'
+$checksum64  = 'F809D60FC12877122ACF4A817F4D3DDF4C04A043A02197FDC910CB1A763D6E5A'
 
 # The upstream NSIS installer is per-user by default (electron-builder
 # `perMachine: false`). Chocolatey runs elevated and users expect a machine-wide
