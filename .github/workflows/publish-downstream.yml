@@ -365,11 +365,53 @@ jobs:
           #
           # wingetcreate re-downloads the installer and computes its own hash, so the
           # manifest's checksum comes from the published bytes rather than from us.
+          # ⚠️ UPDATE, PATCH, THEN SUBMIT: three steps, not `update --submit`.
+          # `update` copies the previous version's locale manifest word for word, so
+          # it can never change the description. The description is what winget,
+          # winstall.app and every other winget mirror show, and until 2026-10-07 it
+          # opened "ToolsMonk is a Windows desktop app" with the website only as a
+          # URL further down. Google's AI Overview for "toolsmonk" was describing
+          # unrelated, similarly named sites, partly because the third-party pages
+          # about ToolsMonk named the app and not toolsmonk.com. So the first line
+          # now says the app belongs to the website.
+          #
+          # The patch is IDEMPOTENT: once one release carries the new wording,
+          # `update` inherits it and the patch finds nothing to do. A wording change
+          # nobody expected is a WARNING, never a failure: a description must not
+          # be able to block a release.
+          $out = Join-Path $env:RUNNER_TEMP 'winget-out'
           .\wingetcreate.exe update ToolsMonk.ToolsMonk `
             --version $env:VERSION `
             --urls "$url|x64|user" `
-            --submit `
-            --token $env:WINGET_TOKEN
+            --out $out
+          if ($LASTEXITCODE -ne 0) { throw "wingetcreate update failed with exit code $LASTEXITCODE" }
+
+          $locale = Get-ChildItem $out -Recurse -Filter 'ToolsMonk.ToolsMonk.locale.en-US.yaml' | Select-Object -First 1
+          if (-not $locale) { throw "wingetcreate update wrote no en-US locale manifest under $out" }
+          $y = Get-Content $locale.FullName -Raw
+
+          $newShort = 'ShortDescription: The Windows app for ToolsMonk (toolsmonk.com), with 250+ tools for PDFs, images, text, SEO and everyday calculations.'
+          $y = $y -replace '(?m)^ShortDescription: .*$', $newShort
+
+          $oldLead = 'ToolsMonk is a Windows desktop app that puts a large, practical toolbox in one window'
+          $newLead = 'ToolsMonk is a free online toolbox at https://toolsmonk.com, and this is its Windows desktop app. It puts the same large, practical toolbox in one window'
+          if ($y.Contains($oldLead)) {
+            $y = $y.Replace($oldLead, $newLead)
+          } elseif (-not $y.Contains('free online toolbox at https://toolsmonk.com')) {
+            Write-Host '::warning::The winget Description no longer starts with the expected text, so the toolsmonk.com lead was not added. Check the locale manifest by hand.'
+          }
+          Set-Content $locale.FullName $y -NoNewline -Encoding utf8
+
+          # Read back, the same rule as the Chocolatey step: a replacement that
+          # silently matched nothing must not pass for one that worked.
+          $after = Get-Content $locale.FullName -Raw
+          if (-not $after.Contains($newShort)) { throw 'ShortDescription was not updated' }
+
+          .\wingetcreate.exe submit `
+            --prtitle "New version: ToolsMonk.ToolsMonk version $env:VERSION" `
+            --token $env:WINGET_TOKEN `
+            $locale.DirectoryName
+          if ($LASTEXITCODE -ne 0) { throw "wingetcreate submit failed with exit code $LASTEXITCODE" }
 
           "winget: submitted an update PR for $env:VERSION" | Out-File $env:GITHUB_STEP_SUMMARY -Append
 

@@ -15,9 +15,9 @@
     <docsUrl>https://toolsmonk.com/all-tools</docsUrl>
     <bugTrackerUrl>https://toolsmonk.com/contact</bugTrackerUrl>
     <tags>toolsmonk pdf pdf-editor image image-editor text seo calculator converter productivity</tags>
-    <summary>250+ tools for PDFs, images, text, SEO and everyday calculations, in one desktop app.</summary>
+    <summary>The Windows app for ToolsMonk (toolsmonk.com), with 250+ tools for PDFs, images, text, SEO and everyday calculations.</summary>
     <description><![CDATA[
-ToolsMonk is a Windows desktop app that puts a large, practical toolbox in one window: PDFs, images, text, SEO checks and everyday calculations.
+ToolsMonk is a free online toolbox at https://toolsmonk.com, and this is its Windows desktop app. It puts the same large, practical toolbox in one window: PDFs, images, text, SEO checks and everyday calculations.
 
 **Where your files are processed**
 
@@ -43,7 +43,7 @@ ToolsMonk is also published on the Microsoft Store: https://apps.microsoft.com/d
 
 **Notes**
 
-* The upstream installer is not code signed. Chocolatey verifies the download with a SHA256 checksum instead.
+* The upstream installer is signed with a self-signed certificate, which Windows does not treat as trusted. Chocolatey verifies the download with a SHA256 checksum.
 * This package installs machine-wide (`/allusers`). The same installer run by hand installs per-user by default.
 
 Documentation: https://toolsmonk.com/all-tools
