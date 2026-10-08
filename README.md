@@ -4,7 +4,7 @@ This repository publishes the **ToolsMonk desktop app for Windows**: the install
 auto-update feed and the release notes for every version. The app's source code is
 private; nothing but published builds and their packaging lives here.
 
-**Latest version: [1.1.23](https://github.com/vksingh5995/toolsmonk-releases/releases/latest)**
+**Latest version: [1.1.24](https://github.com/vksingh5995/toolsmonk-releases/releases/latest)**
 (2 October 2026). Status on this page was last checked on 2 October 2026.
 
 ## What the app is
@@ -51,11 +51,11 @@ What the desktop app adds on top of the website:
 
 | Where | How | Version |
 |---|---|---|
-| **This page** | [ToolsMonk-Setup-1.1.23.exe](https://github.com/vksingh5995/toolsmonk-releases/releases/latest) under Assets | 1.1.23 |
-| **toolsmonk.com** | [toolsmonk.com/download/windows](https://toolsmonk.com/download/windows) always gives the latest installer from this page | 1.1.23 |
+| **This page** | [ToolsMonk-Setup-1.1.24.exe](https://github.com/vksingh5995/toolsmonk-releases/releases/latest) under Assets | 1.1.24 |
+| **toolsmonk.com** | [toolsmonk.com/download/windows](https://toolsmonk.com/download/windows) always gives the latest installer from this page | 1.1.24 |
 | **Microsoft Store** | [ToolsMonk on the Microsoft Store](https://apps.microsoft.com/detail/9P1W5M4JBZDM) (signed by Microsoft, updates through the Store) | updated by the Store |
-| **Chocolatey** | `choco install toolsmonk` | 1.1.22 approved; 1.1.23 in moderation |
-| **winget** | `winget install ToolsMonk.ToolsMonk` | 1.1.18 listed; 1.1.23 [waiting for review](https://github.com/microsoft/winget-pkgs/pull/445530) |
+| **Chocolatey** | `choco install toolsmonk` | 1.1.23 approved; 1.1.24 in moderation |
+| **winget** | `winget install ToolsMonk.ToolsMonk` | 1.1.23 listed; 1.1.24 [waiting for review](https://github.com/microsoft/winget-pkgs/pull/448598) |
 
 **Requirements:** Windows 10 or 11, 64-bit, and an internet connection (the tools load
 from toolsmonk.com). macOS and Linux builds are not published yet.
@@ -85,7 +85,7 @@ Microsoft Store version does not show this warning, because Microsoft signs it.
 To check a download, compare it against `latest.yml`, or in PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\ToolsMonk-Setup-1.1.23.exe | Format-List Status, SignerCertificate
+Get-AuthenticodeSignature .\ToolsMonk-Setup-1.1.24.exe | Format-List Status, SignerCertificate
 ```
 
 The signer should read `CN=ToolsMonk Labs LLP, O=ToolsMonk Labs LLP, C=IN`.
@@ -100,6 +100,8 @@ click. You can also check by hand with **Check for Updates…** in the ⋯ menu.
 The portable build and the Microsoft Store version do not use this feed (the Store
 updates itself).
 
+**On 1.1.23?** It does not yet trust our self-signed certificate, so it will not update itself to 1.1.24. Download the 1.1.24 installer from this page and run it over your current installation; your settings and sign-in are kept.
+
 If an update ever reports that it could not be installed, download the latest
 installer from this page and run it over your current installation. Your settings and
 sign-in are kept.
@@ -110,6 +112,7 @@ Full notes for each version are on the [Releases](https://github.com/vksingh5995
 
 | Version | Date | Highlights |
 |---|---|---|
+| 1.1.24 | 2026-10-08 | Security update: Electron 44.6.0, tamper protection, only toolsmonk.com opens inside the app, encrypted cookies |
 | 1.1.23 | 2026-10-02 | The installer is digitally signed |
 | 1.1.22 | 2026-09-30 | "Your Data and Privacy" in the menu; ToolsMonk pages always open inside the app; signing out leaves account screens |
 | 1.1.21 | 2026-09-29 | My Account in the title bar; clearer title bar; updated browser engine |
