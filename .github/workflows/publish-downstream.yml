@@ -363,6 +363,15 @@ jobs:
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
+          # ⚠️ Trimmed before use. A secret set by piping into `gh secret set` from PowerShell
+          # carries a trailing newline, and .NET refuses a header value containing one:
+          # wingetcreate then reports it as "Failed to connect to GitHub. Check your
+          # network connection." (its token check maps every HttpRequestException to that
+          # text). Measured on 2026-11-03. Only the fact is logged, never the value.
+          $rawToken = $env:WINGET_CREATE_GITHUB_TOKEN
+          $env:WINGET_CREATE_GITHUB_TOKEN = $rawToken.Trim()
+          if ($rawToken.Length -ne $env:WINGET_CREATE_GITHUB_TOKEN.Length) { Write-Host '::notice::WINGET_TOKEN had surrounding whitespace; trimmed.' }
+          Remove-Variable rawToken
           $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/ToolsMonk-Setup-$env:VERSION.exe"
           Invoke-WebRequest 'https://aka.ms/wingetcreate/latest' -OutFile wingetcreate.exe
 
