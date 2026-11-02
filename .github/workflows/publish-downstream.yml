@@ -363,14 +363,15 @@ jobs:
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
-          # ⚠️ Trimmed before use. A secret set by piping into `gh secret set` from PowerShell
-          # carries a trailing newline, and .NET refuses a header value containing one:
+          # ⚠️ Cleaned before use. A secret piped into `gh secret set` from Windows PowerShell
+          # 5.1 arrives with a leading BYTE-ORDER MARK (U+FEFF; measured: length 41,
+          # first char 65279), and .NET refuses a header value containing it:
           # wingetcreate then reports it as "Failed to connect to GitHub. Check your
           # network connection." (its token check maps every HttpRequestException to that
           # text). Measured on 2026-11-03. Only the fact is logged, never the value.
           $rawToken = $env:WINGET_CREATE_GITHUB_TOKEN
-          $env:WINGET_CREATE_GITHUB_TOKEN = $rawToken.Trim()
-          if ($rawToken.Length -ne $env:WINGET_CREATE_GITHUB_TOKEN.Length) { Write-Host '::notice::WINGET_TOKEN had surrounding whitespace; trimmed.' }
+          $env:WINGET_CREATE_GITHUB_TOKEN = $rawToken.Trim().Trim([char]0xFEFF).Trim()
+          if ($rawToken.Length -ne $env:WINGET_CREATE_GITHUB_TOKEN.Length) { Write-Host '::notice::WINGET_TOKEN had a BOM or surrounding whitespace; removed. Re-set the secret with --body to clean it.' }
           Remove-Variable rawToken
           # Shape check, never the value: a malformed secret otherwise surfaces only as
           # wingetcreate's misleading "Failed to connect to GitHub".
