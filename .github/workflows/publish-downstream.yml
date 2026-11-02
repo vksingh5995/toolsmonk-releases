@@ -372,6 +372,11 @@ jobs:
           $env:WINGET_CREATE_GITHUB_TOKEN = $rawToken.Trim()
           if ($rawToken.Length -ne $env:WINGET_CREATE_GITHUB_TOKEN.Length) { Write-Host '::notice::WINGET_TOKEN had surrounding whitespace; trimmed.' }
           Remove-Variable rawToken
+          # Shape check, never the value: a malformed secret otherwise surfaces only as
+          # wingetcreate's misleading "Failed to connect to GitHub".
+          $tok = $env:WINGET_CREATE_GITHUB_TOKEN
+          Write-Host ("token shape: length={0} classicFormat={1} firstCharCode={2}" -f $tok.Length, ($tok -cmatch '^ghp_[A-Za-z0-9]{36}$'), [int][char]$tok[0])
+          Remove-Variable tok
           $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/ToolsMonk-Setup-$env:VERSION.exe"
           Invoke-WebRequest 'https://aka.ms/wingetcreate/latest' -OutFile wingetcreate.exe
 
