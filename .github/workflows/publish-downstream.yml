@@ -309,6 +309,12 @@ jobs:
     if: needs.resolve.outputs.do_winget == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
+    # ⚠️ WINGET_TOKEN lives in this ENVIRONMENT, not at repo level (2026-11-03). It is a
+    # classic public_repo token on the owner's account, which can also write to this
+    # repo and the mobile releases repo, i.e. where installers are downloaded from. The
+    # environment only releases it to runs on a `v*` tag (the release event) or on
+    # main (a manual dispatch), so a workflow edited on any other branch never sees it.
+    environment: winget
     steps:
       # ⚠️⚠️ PRECONDITION AGAIN, FOR A DIFFERENT REASON. `wingetcreate update` UPDATES
       # an existing manifest; it cannot create one. Until the first "New package" PR
@@ -351,7 +357,10 @@ jobs:
         env:
           VERSION: ${{ needs.resolve.outputs.version }}
           TAG: ${{ needs.resolve.outputs.tag }}
-          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          # wingetcreate reads its token from this variable (microsoft/winget-create
+          # doc/token.md, "for CI/CD"). It replaced `--token`, which wingetcreate itself
+          # warned "may result in the token being logged".
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
           $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:TAG/ToolsMonk-Setup-$env:VERSION.exe"
@@ -390,7 +399,7 @@ jobs:
           if (-not $locale) { throw "wingetcreate update wrote no en-US locale manifest under $out" }
           $y = Get-Content $locale.FullName -Raw
 
-          $newShort = 'ShortDescription: The Windows app for ToolsMonk (toolsmonk.com), with 250+ tools for PDFs, images, text, SEO and everyday calculations.'
+          $newShort = 'ShortDescription: The Windows app for ToolsMonk (toolsmonk.com), with tools for PDFs, images, text, SEO and everyday calculations.'
           $y = $y -replace '(?m)^ShortDescription: .*$', $newShort
 
           $oldLead = 'ToolsMonk is a Windows desktop app that puts a large, practical toolbox in one window'
@@ -409,7 +418,6 @@ jobs:
 
           .\wingetcreate.exe submit `
             --prtitle "New version: ToolsMonk.ToolsMonk version $env:VERSION" `
-            --token $env:WINGET_TOKEN `
             $locale.DirectoryName
           if ($LASTEXITCODE -ne 0) { throw "wingetcreate submit failed with exit code $LASTEXITCODE" }
 
