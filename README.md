@@ -4,7 +4,7 @@ This repository publishes the **ToolsMonk desktop app for Windows**: the install
 auto-update feed and the release notes for every version. The app's source code is
 private; nothing but published builds and their packaging lives here.
 
-**Latest version: [1.1.28](https://github.com/vksingh5995/toolsmonk-releases/releases/latest)**
+**Latest version: [1.1.31](https://github.com/vksingh5995/toolsmonk-releases/releases/latest)**
 (23 October 2026). Status on this page was last checked on 23 October 2026.
 
 ## What the app is
@@ -52,11 +52,11 @@ What the desktop app adds on top of the website:
 
 | Where | How | Version |
 |---|---|---|
-| **This page** | [ToolsMonk-Setup-1.1.28.exe](https://github.com/vksingh5995/toolsmonk-releases/releases/latest) under Assets | 1.1.28 |
-| **toolsmonk.com** | [toolsmonk.com/download/windows](https://toolsmonk.com/download/windows) always gives the latest installer from this page | 1.1.28 |
+| **This page** | [ToolsMonk-Setup-1.1.31.exe](https://github.com/vksingh5995/toolsmonk-releases/releases/latest) under Assets | 1.1.31 |
+| **toolsmonk.com** | [toolsmonk.com/download/windows](https://toolsmonk.com/download/windows) always gives the latest installer from this page | 1.1.31 |
 | **Microsoft Store** | [ToolsMonk on the Microsoft Store](https://apps.microsoft.com/detail/9P1W5M4JBZDM) (signed by Microsoft, updates through the Store) | updated by the Store |
-| **Chocolatey** | `choco install toolsmonk` | 1.1.28 submitted (moderation) |
-| **winget** | `winget install ToolsMonk.ToolsMonk` | 1.1.28 submitted for review |
+| **Chocolatey** | `choco install toolsmonk` | 1.1.31 submitted (moderation) |
+| **winget** | `winget install ToolsMonk.ToolsMonk` | 1.1.31 submitted for review |
 
 **Requirements:** Windows 10 or 11, 64-bit, and an internet connection (the tools load
 from toolsmonk.com). macOS and Linux builds are not published yet.
@@ -86,7 +86,7 @@ Microsoft Store version does not show this warning, because Microsoft signs it.
 To check a download, compare it against `latest.yml`, or in PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\ToolsMonk-Setup-1.1.28.exe | Format-List Status, SignerCertificate
+Get-AuthenticodeSignature .\ToolsMonk-Setup-1.1.31.exe | Format-List Status, SignerCertificate
 ```
 
 The signer should read `CN=ToolsMonk Labs LLP, O=ToolsMonk Labs LLP, C=IN`.
@@ -113,6 +113,9 @@ Full notes for each version are on the [Releases](https://github.com/vksingh5995
 
 | Version | Date | Highlights |
 |---|---|---|
+| 1.1.31 | 2026-11-02 | Same app as 1.1.30; the Windows signing keys can now only be used by builds of the main branch |
+| 1.1.30 | 2026-10-30 | Usage statistics (only if you allowed them) also report whether you are signed in, never which account |
+| 1.1.29 | 2026-10-30 | Security update: the "no connection" page only ever returns you to a normal https address |
 | 1.1.28 | 2026-10-24 | Notifications: turn them on from your profile page to get messages from ToolsMonk on this computer; signing out turns them off |
 | 1.1.27 | 2026-10-23 | Microsoft Store version: "Share with a friend" beside the review request and in the menu |
 | 1.1.26 | 2026-10-23 | Microsoft Store version: "Rate ToolsMonk" in the menu and an occasional, polite review request; no visible change for other installs |
